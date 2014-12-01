@@ -1,0 +1,45 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.define "cpms" do |web|
+    web.vm.box = "ubuntu/trusty64"
+    web.vm.hostname = "cpms-dev"
+    web.vm.post_up_message = "Your appserver should now be running on local port http://localhost:8080"
+    web.vm.network "forwarded_port", guest: 80, host: 8080
+
+    web.vm.provision "puppet" do |puppet|
+      puppet.manifests_path = "manifests"
+      puppet.manifest_file  = "default.pp"
+    end
+  end
+
+  config.vm.define "db" do |db|
+    db.vm.box = "ubuntu/trusty64"
+    db.vm.hostname = "cpms-db"
+    db.vm.post_up_message = "your database is now live on port 55432"
+    db.vm.network "forwarded_port", guest: 5432, host: 55432
+
+    db.vm.provision "puppet" do |puppet|
+      puppet.manifests_path = "manifests"
+      puppet.manifest_file  = "default.pp"
+    end
+  end
+
+  config.vm.network "public_network"
+  config.ssh.forward_agent = true
+  config.vm.synced_folder "~/Textura", "/vagrant"
+
+  config.vm.provider "virtualbox" do |vb|
+    # Don't boot with headless mode
+    #vb.gui = true
+    # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "1024"]
+  end
+
+  # bootstrap puppet
+  config.vm.provision "shell", path: "install_puppet.sh"
+end
